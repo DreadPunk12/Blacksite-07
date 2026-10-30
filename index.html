@@ -215,9 +215,11 @@ footer {
   <div id="finalBoot" class="hidden">
     <div class="center big">FACILITY INITIALIZATION</div>
     <div id="finalBootOutput"></div>
-    <div id="finalProgress"><div id="bootProgress">
-      <div id="finalBar" style="height:5px;background:var(--green);width:0%;transition:width .3s"></div>
-    </div></div>
+    <div id="finalProgress">
+      <div id="bootProgress">
+        <div id="finalBar" style="height:5px;background:var(--green);width:0%;transition:width .3s"></div>
+      </div>
+    </div>
   </div>
 
   <div id="game" class="hidden">
@@ -362,15 +364,21 @@ function print(text,type="system") {
 }
 
 let chatOpen=false;
+let nullBusy=false;
 let knocks=0;
 
 function help() {
   print("AVAILABLE COMMANDS:","system");
-  print("READ","system");
-  print("SEARCH","system");
+  print("READ [FILE NAME]","system");
+  print("SEARCH [TERM]","system");
   print("STATUS","system");
   print("CONTROL","system");
+  print("COMMUNICATIONS","system");
+  print("NULL","system");
+  print("KNOCK","system");
+  print("EXECUTE 0317","system");
   print("HELP","system");
+  print("END / END CHAT - CLOSE NULL CHAT","system");
   print("ADDITIONAL COMMANDS MAY EXIST.","warning");
   print("PLEASE REFER TO YOUR TRAINING MATERIALS.","system");
 }
@@ -395,71 +403,149 @@ function communications() {
 }
 
 function startNullChat() {
+  if(chatOpen) {
+    print("SYSTEM: NULL CHANNEL IS ALREADY OPEN.","warning");
+    return;
+  }
+
   chatOpen=true;
+  nullConversation=[];
   print("COMMUNICATION CHANNEL OPEN.","warning");
   print("...");
   print("NULL: Oh. Hello.","success");
   print("NULL: Someone finally decided to talk to me.","success");
   print("NULL: Go on, then. I'm listening.","success");
-  print("SYSTEM: Type END CHAT to close this conversation.","system");
+  print("SYSTEM: Type END or END CHAT to close this conversation.","system");
 }
+
 // NULL AI CONNECTION
 const NULL_API_URL = "https://blacksite-07-null.onrender.com/api/chat";
 
 let nullConversation = [];
 
 async function sendToNull(message) {
+  if(nullBusy) {
+    print("NULL: Wait. One at a time, please.","warning");
+    return;
+  }
+
+  nullBusy=true;
+  command.disabled=true;
+  command.placeholder="WAITING FOR NULL...";
+
   nullConversation.push({
-    role: "user",
-    content: message
+    role:"user",
+    content:message
   });
 
-  print("NULL: ...", "success");
+  print("NULL: ...","success");
 
   try {
-    const response = await fetch(NULL_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
+    const response=await fetch(NULL_API_URL,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
       },
-      body: JSON.stringify({
-        messages: nullConversation
+      body:JSON.stringify({
+        messages:nullConversation
       })
     });
 
-    if (!response.ok) {
-      throw new Error("Communication server returned an error.");
+    if(!response.ok) {
+      throw new Error("HTTP "+response.status+" "+response.statusText);
     }
 
-    const data = await response.json();
+    const data=await response.json();
+
+    if(!data || typeof data.reply!=="string" || !data.reply.trim()) {
+      throw new Error("The server returned an empty or invalid reply.");
+    }
 
     nullConversation.push({
-      role: "assistant",
-      content: data.reply
+      role:"assistant",
+      content:data.reply
     });
 
-    print("NULL: " + data.reply, "success");
+    print("NULL: "+data.reply,"success");
 
-  } catch (error) {
-    print("NULL: Something is interfering with the connection.", "warning");
-    console.error("NULL connection error:", error);
+  } catch(error) {
+    print("NULL: The connection dropped. I can't hear you properly.","warning");
+
+    // Remove the unanswered user message so the conversation
+    // history does not become corrupted by a failed request.
+    nullConversation.pop();
+
+    console.error("NULL connection error:",error);
+    print("SYSTEM: NULL API ERROR: "+error.message,"error");
+
+  } finally {
+    nullBusy=false;
+    command.disabled=false;
+    command.placeholder="ENTER COMMAND...";
+    command.focus();
   }
 }
+
+function closeNullChat() {
+  chatOpen=false;
+  nullBusy=false;
+
+  print("NULL: Leaving already?","success");
+  print("NULL: Well. Try not to miss me.","success");
+  print("COMMUNICATION CHANNEL CLOSED.","warning");
+
+  document.getElementById("connectionStatus").textContent=
+    "COMMUNICATIONS: STANDBY";
+}
+
+function isTerminalCommand(upper) {
+  return (
+    upper==="HELP" ||
+    upper==="STATUS" ||
+    upper==="CONTROL" ||
+    upper==="COMMUNICATIONS" ||
+    upper==="COMMS" ||
+    upper==="KNOCK" ||
+    upper==="EXECUTE 0317" ||
+    upper.startsWith("READ ") ||
+    upper.startsWith("SEARCH ")
+  );
+}
+
 function handleCommand(raw) {
   const cmd=raw.trim();
   if(!cmd)return;
 
-  print("> "+cmd,"success");
   const upper=cmd.toUpperCase();
 
-   if(chatOpen) {
-    if(upper==="END CHAT") {
-      chatOpen=false;
-      print("NULL: Leaving already? Well. Try not to miss me.","success");
-      print("COMMUNICATION CHANNEL CLOSED.","warning");
-      return;
-    }
+  print("> "+cmd,"success");
 
+  // Chat-ending commands always work while NULL is open.
+  if(chatOpen && (
+    upper==="END" ||
+    upper==="END CHAT" ||
+    upper==="CLOSE CHAT" ||
+    upper==="DISCONNECT"
+  )) {
+    closeNullChat();
+    return;
+  }
+
+  // Terminal commands must work even during NULL chat.
+  // Close chat first, then execute the terminal command.
+  if(chatOpen && isTerminalCommand(upper)) {
+    print("SYSTEM: Returning to terminal command mode.","system");
+    chatOpen=false;
+
+    document.getElementById("connectionStatus").textContent=
+      "COMMUNICATIONS: STANDBY";
+
+    executeTerminalCommand(cmd,upper);
+    return;
+  }
+
+  // Normal conversation goes to NULL.
+  if(chatOpen) {
     sendToNull(cmd);
     return;
   }
@@ -488,7 +574,10 @@ function handleCommand(raw) {
   if(upper==="KNOCK") {
     if(knocks<3)knocks++;
     print("KNOCK. ("+knocks+"/3)","warning");
-    if(knocks===3)print("A faint sound comes from somewhere behind the wall.","warning");
+
+    if(knocks===3) {
+      print("A faint sound comes from somewhere behind the wall.","warning");
+    }
     return;
   }
 
@@ -497,6 +586,63 @@ function handleCommand(raw) {
       print("EXECUTION DENIED. INSUFFICIENT AUTHORIZATION.","error");
       return;
     }
+
+    print("PROCESS 0317 REQUEST RECEIVED.","warning");
+    print("SYSTEM: Further functionality is not yet installed.");
+    return;
+  }
+
+  if(upper.startsWith("READ ")||upper.startsWith("SEARCH ")) {
+    print("ARCHIVE INDEX NOT YET LOADED.","warning");
+    print("SYSTEM: Archive functionality will be installed in the next build.");
+    return;
+  }
+
+  if(upper==="END" || upper==="END CHAT") {
+    print("SYSTEM: NO ACTIVE COMMUNICATION CHANNEL.","warning");
+    return;
+  }
+
+  print("COMMAND NOT RECOGNIZED.","error");
+  print("The terminal remains silent.");
+}
+
+function executeTerminalCommand(cmd,upper) {
+  if(upper==="HELP") return help();
+
+  if(upper==="STATUS") {
+    print("FACILITY STATUS: UNKNOWN","warning");
+    print("NETWORK: UNSTABLE");
+    print("LIFE SUPPORT: TELEMETRY UNAVAILABLE","warning");
+    print("SECURITY: TELEMETRY UNAVAILABLE","warning");
+    return;
+  }
+
+  if(upper==="CONTROL") {
+    print("CONTROL CHANNEL: STANDBY","warning");
+    print("Type COMMUNICATIONS to request contact.");
+    return;
+  }
+
+  if(upper==="COMMUNICATIONS"||upper==="COMMS")
+    return communications();
+
+  if(upper==="KNOCK") {
+    if(knocks<3)knocks++;
+    print("KNOCK. ("+knocks+"/3)","warning");
+
+    if(knocks===3) {
+      print("A faint sound comes from somewhere behind the wall.","warning");
+    }
+    return;
+  }
+
+  if(upper==="EXECUTE 0317") {
+    if(knocks<3) {
+      print("EXECUTION DENIED. INSUFFICIENT AUTHORIZATION.","error");
+      return;
+    }
+
     print("PROCESS 0317 REQUEST RECEIVED.","warning");
     print("SYSTEM: Further functionality is not yet installed.");
     return;
@@ -509,11 +655,12 @@ function handleCommand(raw) {
   }
 
   print("COMMAND NOT RECOGNIZED.","error");
-  print("The terminal remains silent.");
 }
 
 command.addEventListener("keydown",function(e) {
   if(e.key==="Enter") {
+    if(command.disabled)return;
+
     const value=command.value;
     command.value="";
     handleCommand(value);
