@@ -403,7 +403,48 @@ function startNullChat() {
   print("NULL: Go on, then. I'm listening.","success");
   print("SYSTEM: Type END CHAT to close this conversation.","system");
 }
+// NULL AI CONNECTION
+const NULL_API_URL = "https://blacksite-07-null.onrender.com/api/chat";
 
+let nullConversation = [];
+
+async function sendToNull(message) {
+  nullConversation.push({
+    role: "user",
+    content: message
+  });
+
+  print("NULL: ...", "success");
+
+  try {
+    const response = await fetch(NULL_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        messages: nullConversation
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Communication server returned an error.");
+    }
+
+    const data = await response.json();
+
+    nullConversation.push({
+      role: "assistant",
+      content: data.reply
+    });
+
+    print("NULL: " + data.reply, "success");
+
+  } catch (error) {
+    print("NULL: Something is interfering with the connection.", "warning");
+    console.error("NULL connection error:", error);
+  }
+}
 function handleCommand(raw) {
   const cmd=raw.trim();
   if(!cmd)return;
@@ -411,15 +452,15 @@ function handleCommand(raw) {
   print("> "+cmd,"success");
   const upper=cmd.toUpperCase();
 
-  if(chatOpen) {
+   if(chatOpen) {
     if(upper==="END CHAT") {
       chatOpen=false;
       print("NULL: Leaving already? Well. Try not to miss me.","success");
       print("COMMUNICATION CHANNEL CLOSED.","warning");
       return;
     }
-    print("NULL: My proper AI connection is not installed yet.","success");
-    print("NULL: I can hear you, technically. Give the developers a moment.","success");
+
+    sendToNull(cmd);
     return;
   }
 
