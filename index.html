@@ -367,20 +367,308 @@ let chatOpen=false;
 let nullBusy=false;
 let knocks=0;
 
+// --------------------------------------------------
+// BLACKSITE 07 ARCHIVE DATABASE
+// --------------------------------------------------
+
+const ARCHIVES = {
+  "INCIDENT_0317.LOG": {
+    title:"INCIDENT REPORT 0317",
+    classification:"CLASSIFIED // LEVEL 4",
+    date:"03/17/20XX",
+    content:[
+      "INCIDENT REPORT: 0317",
+      "LOCATION: LOWER RESEARCH WING",
+      "REPORTING OFFICER: [REDACTED]",
+      "",
+      "At approximately 02:13, the facility experienced",
+      "an unexplained interruption in internal communications.",
+      "",
+      "Personnel assigned to the lower research wing",
+      "reported hearing repeated knocking from inside",
+      "a sealed maintenance wall.",
+      "",
+      "No maintenance personnel were scheduled in that area.",
+      "",
+      "Security reviewed the available camera recordings.",
+      "At 02:17, the hallway camera briefly displayed an",
+      "image inconsistent with the recorded surroundings.",
+      "",
+      "The recording ends before the source is identified.",
+      "",
+      "STATUS: INVESTIGATION SUSPENDED.",
+      "ADDITIONAL MATERIAL: RESTRICTED."
+    ]
+  },
+
+  "PERSONNEL_EXAVEROR.DAT": {
+    title:"PERSONNEL RECORD",
+    classification:"CONFIDENTIAL // PERSONNEL",
+    date:"RECORD LAST UPDATED: 03/12/20XX",
+    content:[
+      "PERSONNEL IDENTIFICATION",
+      "NAME: JAMES EXAVEROR",
+      "POSITION: REMOTE TERMINAL OPERATOR",
+      "CLEARANCE: RESTRICTED",
+      "ASSIGNMENT: BLACKSITE 07",
+      "",
+      "DUTIES:",
+      "- Monitor remote facility systems.",
+      "- Review authorized archive records.",
+      "- Maintain contact with CONTROL.",
+      "- Report unexpected terminal activity.",
+      "",
+      "ADDITIONAL NOTES:",
+      "Operator access was restored following the",
+      "communications failure.",
+      "",
+      "PREVIOUS SESSION DATA: UNAVAILABLE.",
+      "SUPERVISOR SIGNATURE: [REDACTED]"
+    ]
+  },
+
+  "LIFE_SUPPORT_04.LOG": {
+    title:"LIFE SUPPORT SYSTEM REPORT",
+    classification:"INTERNAL // ENGINEERING",
+    date:"LAST TRANSMISSION: 03/17/20XX 02:11",
+    content:[
+      "SYSTEM: LIFE SUPPORT ARRAY 04",
+      "LOCATION: CENTRAL FACILITY",
+      "",
+      "ATMOSPHERIC CIRCULATION: UNKNOWN",
+      "OXYGEN REGULATION: NO TELEMETRY",
+      "TEMPERATURE CONTROL: NO TELEMETRY",
+      "PRESSURE REGULATION: NO TELEMETRY",
+      "",
+      "LAST CONFIRMED SYSTEM CHECK: 02:11",
+      "",
+      "The remote monitoring station stopped receiving",
+      "regular telemetry shortly before the communications",
+      "interruption.",
+      "",
+      "No confirmed mechanical failure was reported.",
+      "",
+      "WARNING:",
+      "LOSS OF TELEMETRY DOES NOT CONFIRM SYSTEM FAILURE.",
+      "DO NOT ISSUE UNAUTHORIZED MAINTENANCE COMMANDS."
+    ]
+  },
+
+  "EXPERIMENT_12.LOG": {
+    title:"EXPERIMENT 12 // RESEARCH NOTES",
+    classification:"RESTRICTED // LEVEL 4",
+    date:"03/16/20XX",
+    content:[
+      "RESEARCH DIVISION",
+      "EXPERIMENT IDENTIFIER: 12",
+      "SUBJECT: [REDACTED]",
+      "",
+      "Observation period continued beyond the scheduled",
+      "testing window.",
+      "",
+      "Research personnel reported irregular sounds",
+      "originating from the observation chamber.",
+      "",
+      "The chamber's recording equipment captured",
+      "several unexplained interruptions.",
+      "",
+      "A technician requested that the session be terminated.",
+      "The request was denied pending supervisor approval.",
+      "",
+      "FINAL ENTRY:",
+      "The subject appeared to respond to a voice",
+      "that was not present in the room.",
+      "",
+      "FURTHER DETAILS: ACCESS RESTRICTED."
+    ]
+  },
+
+  "COMMUNICATIONS_1021.LOG": {
+    title:"COMMUNICATIONS TRANSCRIPT",
+    classification:"INTERNAL // CONTROL",
+    date:"03/17/20XX 02:21",
+    content:[
+      "COMMUNICATIONS RECORD: 1021",
+      "SOURCE: CONTROL",
+      "DESTINATION: REMOTE TERMINAL",
+      "",
+      "CONTROL: Can you hear me?",
+      "",
+      "CONTROL: The internal network is unstable.",
+      "We have lost contact with several sections.",
+      "",
+      "CONTROL: Do not attempt to access the physical",
+      "facility systems from your terminal.",
+      "",
+      "CONTROL: If you receive an unexpected message,",
+      "do not assume it came from another operator.",
+      "",
+      "[SIGNAL INTERRUPTION]",
+      "",
+      "CONTROL: ...Are you still there?",
+      "",
+      "[RECORDING TERMINATED]",
+      "",
+      "TRANSCRIPT STATUS: INCOMPLETE."
+    ]
+  }
+};
+
+function listFiles() {
+  const names=Object.keys(ARCHIVES);
+
+  print("BLACKSITE 07 // ARCHIVE DIRECTORY","warning");
+  print("------------------------------------------------");
+  print("AVAILABLE RECORDS: "+names.length,"system");
+  print("");
+
+  names.forEach((name,index)=>{
+    print((index+1).toString().padStart(2,"0")+"  "+name,"success");
+  });
+
+  print("");
+  print("USE: READ [FILE NAME] TO OPEN A RECORD.","system");
+}
+
+function readFile(filename) {
+  const name=filename.trim().toUpperCase();
+
+  if(!name) {
+    listFiles();
+    return;
+  }
+
+  const file=ARCHIVES[name];
+
+  if(!file) {
+    const partial=Object.keys(ARCHIVES).filter(
+      key=>key.includes(name)
+    );
+
+    if(partial.length) {
+      print("NO EXACT MATCH. POSSIBLE FILES:","warning");
+      partial.forEach(key=>print(key,"success"));
+    } else {
+      print("ERROR: ARCHIVE FILE NOT FOUND.","error");
+      print("USE FILES TO VIEW AVAILABLE RECORDS.","system");
+    }
+    return;
+  }
+
+  print("========================================","system");
+  print(file.title,"warning");
+  print("FILE: "+name,"success");
+  print(file.classification,"warning");
+  print(file.date,"system");
+  print("========================================","system");
+
+  file.content.forEach(line=>{
+    print(line,line.includes("[REDACTED]")?"error":"system");
+  });
+
+  print("========================================","system");
+  print("END OF RECORD.","warning");
+}
+
+function searchArchives(term) {
+  const query=term.trim().toLowerCase();
+
+  if(!query) {
+    print("SEARCH REQUIRES A TERM.","warning");
+    print("USAGE: SEARCH [WORD OR PHRASE]");
+    print("EXAMPLE: SEARCH COMMUNICATIONS");
+    return;
+  }
+
+  const results=[];
+
+  Object.entries(ARCHIVES).forEach(([filename,file])=>{
+    file.content.forEach((line,index)=>{
+      if(line.toLowerCase().includes(query)) {
+        results.push({
+          filename,
+          line,
+          lineNumber:index+1
+        });
+      }
+    });
+  });
+
+  // Also search filenames and titles.
+  Object.entries(ARCHIVES).forEach(([filename,file])=>{
+    if(filename.toLowerCase().includes(query) ||
+       file.title.toLowerCase().includes(query)) {
+      results.push({
+        filename,
+        line:"FILE TITLE OR NAME MATCH",
+        lineNumber:"--"
+      });
+    }
+  });
+
+  print("ARCHIVE SEARCH: "+term,"warning");
+  print("----------------------------------------");
+
+  if(results.length===0) {
+    print("NO MATCHING RECORDS FOUND.","error");
+    print("SEARCH COMPLETE.","system");
+    return;
+  }
+
+  print("MATCHES FOUND: "+results.length,"success");
+  print("");
+
+  results.forEach(result=>{
+    print("FILE: "+result.filename,"success");
+    print("LINE "+result.lineNumber+": "+result.line,"system");
+    print("");
+  });
+
+  print("SEARCH COMPLETE.","warning");
+  print("USE READ [FILE NAME] TO OPEN A MATCH.","system");
+}
+
+// --------------------------------------------------
+// COMMAND HELP
+// --------------------------------------------------
+
 function help() {
-  print("AVAILABLE COMMANDS:","system");
-  print("READ [FILE NAME]","system");
-  print("SEARCH [TERM]","system");
-  print("STATUS","system");
-  print("CONTROL","system");
-  print("COMMUNICATIONS","system");
-  print("NULL","system");
-  print("KNOCK","system");
-  print("EXECUTE 0317","system");
-  print("HELP","system");
-  print("END / END CHAT - CLOSE NULL CHAT","system");
+  print("BLACKSITE 07 // COMMAND REFERENCE","warning");
+  print("----------------------------------------");
+  print("FILES","success");
+  print("  List available archive records.");
+  print("");
+  print("READ [FILE NAME]","success");
+  print("  Open a specific archive record.");
+  print("");
+  print("SEARCH [TERM]","success");
+  print("  Search the contents of archive records.");
+  print("");
+  print("STATUS","success");
+  print("  Display current facility status.");
+  print("");
+  print("CONTROL","success");
+  print("  Check the CONTROL channel.");
+  print("");
+  print("COMMUNICATIONS","success");
+  print("  Request contact with CONTROL.");
+  print("");
+  print("NULL","success");
+  print("  Open the NULL communication channel.");
+  print("");
+  print("KNOCK","success");
+  print("  Send a signal through the terminal.");
+  print("");
+  print("EXECUTE 0317","success");
+  print("  Submit the restricted process request.");
+  print("");
+  print("HELP","success");
+  print("  Display this command reference.");
+  print("");
+  print("END / END CHAT","success");
+  print("  Close the NULL conversation.");
+  print("----------------------------------------");
   print("ADDITIONAL COMMANDS MAY EXIST.","warning");
-  print("PLEASE REFER TO YOUR TRAINING MATERIALS.","system");
 }
 
 function communications() {
@@ -398,9 +686,14 @@ function communications() {
   print("confirm its condition from here.","warning");
   print("CONTROL: I'll explain the individual systems as we","warning");
   print("recover more information. Stay on the line.","warning");
+
   document.getElementById("connectionStatus").textContent=
     "COMMUNICATIONS: CONNECTED";
 }
+
+// --------------------------------------------------
+// NULL CHAT
+// --------------------------------------------------
 
 function startNullChat() {
   if(chatOpen) {
@@ -410,6 +703,7 @@ function startNullChat() {
 
   chatOpen=true;
   nullConversation=[];
+
   print("COMMUNICATION CHANNEL OPEN.","warning");
   print("...");
   print("NULL: Oh. Hello.","success");
@@ -418,9 +712,7 @@ function startNullChat() {
   print("SYSTEM: Type END or END CHAT to close this conversation.","system");
 }
 
-// NULL AI CONNECTION
 const NULL_API_URL = "https://blacksite-07-null.onrender.com/api/chat";
-
 let nullConversation = [];
 
 async function sendToNull(message) {
@@ -443,12 +735,8 @@ async function sendToNull(message) {
   try {
     const response=await fetch(NULL_API_URL,{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        messages:nullConversation
-      })
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({messages:nullConversation})
     });
 
     if(!response.ok) {
@@ -470,11 +758,7 @@ async function sendToNull(message) {
 
   } catch(error) {
     print("NULL: The connection dropped. I can't hear you properly.","warning");
-
-    // Remove the unanswered user message so the conversation
-    // history does not become corrupted by a failed request.
     nullConversation.pop();
-
     console.error("NULL connection error:",error);
     print("SYSTEM: NULL API ERROR: "+error.message,"error");
 
@@ -488,7 +772,6 @@ async function sendToNull(message) {
 
 function closeNullChat() {
   chatOpen=false;
-  nullBusy=false;
 
   print("NULL: Leaving already?","success");
   print("NULL: Well. Try not to miss me.","success");
@@ -498,17 +781,24 @@ function closeNullChat() {
     "COMMUNICATIONS: STANDBY";
 }
 
+// --------------------------------------------------
+// COMMAND ROUTING
+// --------------------------------------------------
+
 function isTerminalCommand(upper) {
   return (
     upper==="HELP" ||
+    upper==="FILES" ||
+    upper==="READ" ||
+    upper.startsWith("READ ") ||
+    upper==="SEARCH" ||
+    upper.startsWith("SEARCH ") ||
     upper==="STATUS" ||
     upper==="CONTROL" ||
     upper==="COMMUNICATIONS" ||
     upper==="COMMS" ||
     upper==="KNOCK" ||
-    upper==="EXECUTE 0317" ||
-    upper.startsWith("READ ") ||
-    upper.startsWith("SEARCH ")
+    upper==="EXECUTE 0317"
   );
 }
 
@@ -517,10 +807,9 @@ function handleCommand(raw) {
   if(!cmd)return;
 
   const upper=cmd.toUpperCase();
-
   print("> "+cmd,"success");
 
-  // Chat-ending commands always work while NULL is open.
+  // Closing NULL always takes priority.
   if(chatOpen && (
     upper==="END" ||
     upper==="END CHAT" ||
@@ -531,8 +820,7 @@ function handleCommand(raw) {
     return;
   }
 
-  // Terminal commands must work even during NULL chat.
-  // Close chat first, then execute the terminal command.
+  // Allow terminal commands while NULL is open.
   if(chatOpen && isTerminalCommand(upper)) {
     print("SYSTEM: Returning to terminal command mode.","system");
     chatOpen=false;
@@ -544,17 +832,35 @@ function handleCommand(raw) {
     return;
   }
 
-  // Normal conversation goes to NULL.
+  // Anything else is conversation while NULL is open.
   if(chatOpen) {
     sendToNull(cmd);
     return;
   }
 
+  executeTerminalCommand(cmd,upper);
+}
+
+function executeTerminalCommand(cmd,upper) {
+
   if(upper==="HELP") return help();
 
-  if(upper==="NULL") return startNullChat();
+  if(upper==="FILES" || upper==="READ")
+    return listFiles();
 
-  if(upper==="COMMUNICATIONS"||upper==="COMMS")
+  if(upper.startsWith("READ "))
+    return readFile(cmd.substring(5));
+
+  if(upper==="SEARCH")
+    return searchArchives("");
+
+  if(upper.startsWith("SEARCH "))
+    return searchArchives(cmd.substring(7));
+
+  if(upper==="NULL")
+    return startNullChat();
+
+  if(upper==="COMMUNICATIONS" || upper==="COMMS")
     return communications();
 
   if(upper==="STATUS") {
@@ -562,6 +868,8 @@ function handleCommand(raw) {
     print("NETWORK: UNSTABLE");
     print("LIFE SUPPORT: TELEMETRY UNAVAILABLE","warning");
     print("SECURITY: TELEMETRY UNAVAILABLE","warning");
+    print("ARCHIVE DATABASE: LOCAL ACCESS AVAILABLE","success");
+    print("REMOTE MONITORING: NO RESPONSE","warning");
     return;
   }
 
@@ -589,12 +897,6 @@ function handleCommand(raw) {
 
     print("PROCESS 0317 REQUEST RECEIVED.","warning");
     print("SYSTEM: Further functionality is not yet installed.");
-    return;
-  }
-
-  if(upper.startsWith("READ ")||upper.startsWith("SEARCH ")) {
-    print("ARCHIVE INDEX NOT YET LOADED.","warning");
-    print("SYSTEM: Archive functionality will be installed in the next build.");
     return;
   }
 
@@ -605,56 +907,6 @@ function handleCommand(raw) {
 
   print("COMMAND NOT RECOGNIZED.","error");
   print("The terminal remains silent.");
-}
-
-function executeTerminalCommand(cmd,upper) {
-  if(upper==="HELP") return help();
-
-  if(upper==="STATUS") {
-    print("FACILITY STATUS: UNKNOWN","warning");
-    print("NETWORK: UNSTABLE");
-    print("LIFE SUPPORT: TELEMETRY UNAVAILABLE","warning");
-    print("SECURITY: TELEMETRY UNAVAILABLE","warning");
-    return;
-  }
-
-  if(upper==="CONTROL") {
-    print("CONTROL CHANNEL: STANDBY","warning");
-    print("Type COMMUNICATIONS to request contact.");
-    return;
-  }
-
-  if(upper==="COMMUNICATIONS"||upper==="COMMS")
-    return communications();
-
-  if(upper==="KNOCK") {
-    if(knocks<3)knocks++;
-    print("KNOCK. ("+knocks+"/3)","warning");
-
-    if(knocks===3) {
-      print("A faint sound comes from somewhere behind the wall.","warning");
-    }
-    return;
-  }
-
-  if(upper==="EXECUTE 0317") {
-    if(knocks<3) {
-      print("EXECUTION DENIED. INSUFFICIENT AUTHORIZATION.","error");
-      return;
-    }
-
-    print("PROCESS 0317 REQUEST RECEIVED.","warning");
-    print("SYSTEM: Further functionality is not yet installed.");
-    return;
-  }
-
-  if(upper.startsWith("READ ")||upper.startsWith("SEARCH ")) {
-    print("ARCHIVE INDEX NOT YET LOADED.","warning");
-    print("SYSTEM: Archive functionality will be installed in the next build.");
-    return;
-  }
-
-  print("COMMAND NOT RECOGNIZED.","error");
 }
 
 command.addEventListener("keydown",function(e) {
