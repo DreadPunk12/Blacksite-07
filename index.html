@@ -1,0 +1,483 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLACKSITE 07 // LOST SIGNAL STUDIOS</title>
+<style>
+:root {
+  --green:#8aff9b;
+  --dim:#477c51;
+  --red:#e34c4c;
+  --bg:#050806;
+  --panel:#0a100c;
+  --line:#1b3923;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--green);
+  font-family:Consolas,"Courier New",monospace;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body:after {
+  content:"";
+  pointer-events:none;
+  position:fixed;
+  inset:0;
+  z-index:20;
+  background:repeating-linear-gradient(
+    transparent 0px,transparent 2px,
+    rgba(0,0,0,.13) 3px
+  );
+}
+#screen {
+  width:min(1050px,94%);
+  margin:35px auto;
+  min-height:80vh;
+  border:1px solid var(--line);
+  background:var(--panel);
+  box-shadow:0 0 35px #10271833;
+  padding:25px;
+  position:relative;
+}
+header {
+  border-bottom:1px solid var(--line);
+  padding-bottom:15px;
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  flex-wrap:wrap;
+  font-size:12px;
+  color:var(--dim);
+}
+.logo {
+  font-size:23px;
+  letter-spacing:4px;
+  color:var(--green);
+  margin:35px 0 5px;
+}
+.subtitle {
+  color:var(--dim);
+  font-size:12px;
+  letter-spacing:3px;
+}
+#content { margin-top:35px; }
+.line {
+  margin:9px 0;
+  white-space:pre-wrap;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+.system { color:var(--dim); }
+.warning { color:#e7bd68; }
+.error { color:var(--red); }
+.success { color:var(--green); }
+.center { text-align:center; }
+.big { font-size:20px; letter-spacing:3px; }
+#login {
+  width:min(440px,100%);
+  margin:55px auto;
+  border:1px solid var(--line);
+  padding:25px;
+  background:#060b08;
+}
+label {
+  display:block;
+  color:var(--dim);
+  font-size:12px;
+  margin:20px 0 8px;
+}
+input {
+  width:100%;
+  background:#030604;
+  border:1px solid var(--line);
+  color:var(--green);
+  padding:13px;
+  font:inherit;
+  outline:none;
+}
+input:focus { border-color:var(--green); }
+button {
+  background:#102016;
+  color:var(--green);
+  border:1px solid var(--dim);
+  padding:12px 18px;
+  font:inherit;
+  cursor:pointer;
+}
+button:hover { background:#1b3823; }
+#login button { width:100%; margin-top:25px; }
+.hidden { display:none!important; }
+#terminal {
+  border:1px solid var(--line);
+  background:#030604;
+  min-height:430px;
+  padding:18px;
+}
+#output {
+  height:350px;
+  overflow-y:auto;
+  scrollbar-color:var(--dim) #030604;
+}
+#commandRow {
+  display:flex;
+  align-items:center;
+  border-top:1px solid var(--line);
+  padding-top:13px;
+  gap:10px;
+}
+#commandRow span { color:var(--green); }
+#command {
+  border:0;
+  padding:8px 0;
+  background:transparent;
+  flex:1;
+}
+#command:focus { border:0; }
+.statusbar {
+  margin-top:20px;
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  color:var(--dim);
+  font-size:11px;
+}
+#bootProgress {
+  height:5px;
+  background:#142018;
+  margin:25px 0;
+}
+#bootBar {
+  height:100%;
+  width:0%;
+  background:var(--green);
+  transition:width .3s;
+}
+.blink { animation:blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+footer {
+  margin-top:35px;
+  text-align:center;
+  color:#35553b;
+  font-size:10px;
+  letter-spacing:2px;
+}
+@media(max-width:600px) {
+  #screen { margin:10px auto; padding:15px; }
+  .logo { font-size:19px; }
+  #output { height:55vh; }
+}
+</style>
+</head>
+<body>
+
+<div id="screen">
+<header>
+  <span>LOST SIGNAL STUDIOS // INTERNAL SOFTWARE</span>
+  <span>BLACKSITE 07 // TERMINAL</span>
+</header>
+
+<div class="logo">BLACKSITE <span style="color:#d34d4d">07</span></div>
+<div class="subtitle">CLASSIFIED FACILITY MANAGEMENT SYSTEM</div>
+
+<div id="content">
+
+  <div id="boot">
+    <div class="line system">INITIALIZING TERMINAL...</div>
+    <div id="bootProgress"><div id="bootBar"></div></div>
+    <div id="bootOutput"></div>
+  </div>
+
+  <div id="login" class="hidden">
+    <div class="center big">SECURE ACCESS</div>
+    <div class="line system center">AUTHORIZED PERSONNEL ONLY</div>
+
+    <form id="loginForm">
+      <label for="operator">OPERATOR IDENTIFICATION</label>
+      <input id="operator" autocomplete="username"
+        placeholder="ENTER OPERATOR NAME" required>
+
+      <label for="accessKey">ACCESS KEY</label>
+      <input id="accessKey" type="password"
+        autocomplete="current-password"
+        placeholder="ENTER ACCESS KEY" required>
+
+      <button type="submit">AUTHENTICATE</button>
+    </form>
+    <div id="loginMessage" class="line error"></div>
+    <div class="line system center">UNAUTHORIZED ACCESS IS PROHIBITED.</div>
+  </div>
+
+  <div id="finalBoot" class="hidden">
+    <div class="center big">FACILITY INITIALIZATION</div>
+    <div id="finalBootOutput"></div>
+    <div id="finalProgress"><div id="bootProgress">
+      <div id="finalBar" style="height:5px;background:var(--green);width:0%;transition:width .3s"></div>
+    </div></div>
+  </div>
+
+  <div id="game" class="hidden">
+    <div class="line warning">BLACKSITE 07 // REMOTE TERMINAL ACCESS</div>
+    <div class="line system">OPERATOR: JAMES EXAVEROR</div>
+    <div class="line system">CONNECTION: RESTRICTED</div>
+    <div class="line system">FACILITY STATUS: UNKNOWN</div>
+    <br>
+    <div id="terminal">
+      <div id="output"></div>
+      <div id="commandRow">
+        <span>&gt;</span>
+        <input id="command" autocomplete="off"
+          placeholder="ENTER COMMAND..." autofocus>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span>BLACKSITE 07</span>
+      <span id="connectionStatus">COMMUNICATIONS: STANDBY</span>
+      <span>SESSION ACTIVE</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>LOST SIGNAL STUDIOS // SOME THINGS SHOULD STAY UNANSWERED.</footer>
+</div>
+
+<script>
+const OPERATOR = "JAMES EXAVEROR";
+const ACCESS_KEY = "01011220140109051016";
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
+
+async function printBoot(target, lines, delay=650) {
+  for(let i=0;i<lines.length;i++) {
+    const div=document.createElement("div");
+    div.className="line system";
+    div.textContent=lines[i];
+    target.appendChild(div);
+    document.getElementById("bootBar").style.width =
+      ((i+1)/lines.length*100)+"%";
+    await sleep(delay);
+  }
+}
+
+async function initialBoot() {
+  const out=document.getElementById("bootOutput");
+  await sleep(700);
+  await printBoot(out,[
+    "LOADING BLACKSITE OPERATING ENVIRONMENT...",
+    "CHECKING LOCAL MEMORY........................ OK",
+    "CHECKING TERMINAL INTEGRITY.................. OK",
+    "FACILITY NETWORK............................. NO RESPONSE",
+    "REMOTE CONNECTION............................ FAILED",
+    "RECOVERING LAST KNOWN SYSTEM STATE............ COMPLETE",
+    "SECURITY PROTOCOL............................ ACTIVE",
+    "PERSONNEL DATABASE........................... AVAILABLE",
+    "COMMUNICATIONS ARRAY......................... STANDBY",
+    "WARNING: FACILITY STATUS CANNOT BE VERIFIED."
+  ]);
+  await sleep(1000);
+  document.getElementById("boot").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+}
+
+initialBoot();
+
+document.getElementById("loginForm").addEventListener("submit",
+async function(e) {
+  e.preventDefault();
+
+  const name=document.getElementById("operator").value.trim();
+  const key=document.getElementById("accessKey").value.trim();
+  const message=document.getElementById("loginMessage");
+
+  if(name.toUpperCase()!==OPERATOR || key!==ACCESS_KEY) {
+    message.textContent="ACCESS DENIED. CREDENTIALS NOT RECOGNIZED.";
+    await sleep(300);
+    return;
+  }
+
+  message.textContent="IDENTITY CONFIRMED.";
+  await sleep(900);
+
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("finalBoot").classList.remove("hidden");
+
+  await finalBoot();
+});
+
+async function finalBoot() {
+  const out=document.getElementById("finalBootOutput");
+  const lines=[
+    "AUTHENTICATION ACCEPTED.",
+    "WELCOME, OPERATOR JAMES EXAVEROR.",
+    "ESTABLISHING REMOTE FACILITY SESSION...",
+    "LOADING ARCHIVE INDEX......................... OK",
+    "LOADING PERSONNEL RECORDS..................... OK",
+    "LOADING EXPERIMENT RECORDS.................... PARTIAL",
+    "FACILITY NETWORK.............................. UNSTABLE",
+    "LIFE SUPPORT TELEMETRY........................ UNAVAILABLE",
+    "SECURITY NETWORK............................... UNAVAILABLE",
+    "COMMUNICATIONS CHANNEL........................ STANDBY",
+    "REMOTE MONITORING STATION...................... NO RESPONSE",
+    "LOADING TERMINAL ENVIRONMENT.................. COMPLETE",
+    "",
+    "SESSION RESTORED.",
+    "WELCOME TO BLACKSITE 07."
+  ];
+
+  for(let i=0;i<lines.length;i++) {
+    const div=document.createElement("div");
+    div.className="line "+(lines[i].includes("UNAVAILABLE")||
+      lines[i].includes("UNSTABLE")?"warning":"system");
+    div.textContent=lines[i]||" ";
+    out.appendChild(div);
+    document.getElementById("finalBar").style.width =
+      ((i+1)/lines.length*100)+"%";
+    await sleep(750);
+  }
+
+  await sleep(1200);
+  document.getElementById("finalBoot").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("command").focus();
+
+  print("SYSTEM: Terminal session active.");
+  print("SYSTEM: Awaiting operator input.");
+  print("SYSTEM: Type HELP for available commands.");
+}
+
+const output=document.getElementById("output");
+const command=document.getElementById("command");
+
+function print(text,type="system") {
+  const div=document.createElement("div");
+  div.className="line "+type;
+  div.textContent=text;
+  output.appendChild(div);
+  output.scrollTop=output.scrollHeight;
+}
+
+let chatOpen=false;
+let knocks=0;
+
+function help() {
+  print("AVAILABLE COMMANDS:","system");
+  print("READ","system");
+  print("SEARCH","system");
+  print("STATUS","system");
+  print("CONTROL","system");
+  print("HELP","system");
+  print("ADDITIONAL COMMANDS MAY EXIST.","warning");
+  print("PLEASE REFER TO YOUR TRAINING MATERIALS.","system");
+}
+
+function communications() {
+  print("CONTROL: Communications channel requested.","warning");
+  print("CONTROL: This is CONTROL. Do you read me?","warning");
+  print("CONTROL: Good. I'll keep this brief. Your terminal is","warning");
+  print("a remote access point. You do not have direct access","warning");
+  print("to the facility's physical control panels.","warning");
+  print("CONTROL: Life support maintains breathable air,","warning");
+  print("temperature, and atmospheric circulation. The","warning");
+  print("terminal can report conditions and relay authorized","warning");
+  print("maintenance instructions. Do not improvise repairs.","warning");
+  print("CONTROL: If telemetry is unavailable, that does not","warning");
+  print("mean life support has stopped. It means we cannot","warning");
+  print("confirm its condition from here.","warning");
+  print("CONTROL: I'll explain the individual systems as we","warning");
+  print("recover more information. Stay on the line.","warning");
+  document.getElementById("connectionStatus").textContent=
+    "COMMUNICATIONS: CONNECTED";
+}
+
+function startNullChat() {
+  chatOpen=true;
+  print("COMMUNICATION CHANNEL OPEN.","warning");
+  print("...");
+  print("NULL: Oh. Hello.","success");
+  print("NULL: Someone finally decided to talk to me.","success");
+  print("NULL: Go on, then. I'm listening.","success");
+  print("SYSTEM: Type END CHAT to close this conversation.","system");
+}
+
+function handleCommand(raw) {
+  const cmd=raw.trim();
+  if(!cmd)return;
+
+  print("> "+cmd,"success");
+  const upper=cmd.toUpperCase();
+
+  if(chatOpen) {
+    if(upper==="END CHAT") {
+      chatOpen=false;
+      print("NULL: Leaving already? Well. Try not to miss me.","success");
+      print("COMMUNICATION CHANNEL CLOSED.","warning");
+      return;
+    }
+    print("NULL: My proper AI connection is not installed yet.","success");
+    print("NULL: I can hear you, technically. Give the developers a moment.","success");
+    return;
+  }
+
+  if(upper==="HELP") return help();
+
+  if(upper==="NULL") return startNullChat();
+
+  if(upper==="COMMUNICATIONS"||upper==="COMMS")
+    return communications();
+
+  if(upper==="STATUS") {
+    print("FACILITY STATUS: UNKNOWN","warning");
+    print("NETWORK: UNSTABLE");
+    print("LIFE SUPPORT: TELEMETRY UNAVAILABLE","warning");
+    print("SECURITY: TELEMETRY UNAVAILABLE","warning");
+    return;
+  }
+
+  if(upper==="CONTROL") {
+    print("CONTROL CHANNEL: STANDBY","warning");
+    print("Type COMMUNICATIONS to request contact.");
+    return;
+  }
+
+  if(upper==="KNOCK") {
+    if(knocks<3)knocks++;
+    print("KNOCK. ("+knocks+"/3)","warning");
+    if(knocks===3)print("A faint sound comes from somewhere behind the wall.","warning");
+    return;
+  }
+
+  if(upper==="EXECUTE 0317") {
+    if(knocks<3) {
+      print("EXECUTION DENIED. INSUFFICIENT AUTHORIZATION.","error");
+      return;
+    }
+    print("PROCESS 0317 REQUEST RECEIVED.","warning");
+    print("SYSTEM: Further functionality is not yet installed.");
+    return;
+  }
+
+  if(upper.startsWith("READ ")||upper.startsWith("SEARCH ")) {
+    print("ARCHIVE INDEX NOT YET LOADED.","warning");
+    print("SYSTEM: Archive functionality will be installed in the next build.");
+    return;
+  }
+
+  print("COMMAND NOT RECOGNIZED.","error");
+  print("The terminal remains silent.");
+}
+
+command.addEventListener("keydown",function(e) {
+  if(e.key==="Enter") {
+    const value=command.value;
+    command.value="";
+    handleCommand(value);
+  }
+});
+</script>
+</body>
+</html>
